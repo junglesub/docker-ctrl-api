@@ -43,7 +43,7 @@ keys:
     secret_key: abc123
 ```
 
-Optionally, use a `.env` file to manage environment variables.
+This path defaults to `./config.yml` but can be overridden by setting the `CONFIG_PATH` environment variable.
 
 ## 🚀 Development Server
 

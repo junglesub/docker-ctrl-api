@@ -11,6 +11,6 @@ export const KeyConfigService = new Elysia({
 }));
 
 const loadKeyConfig = (): KeyConfig => {
-  const file = fs.readFileSync("config.yml", "utf8");
+  const file = fs.readFileSync(process.env.CONFIG_PATH || "config.yml", "utf8");
   return yaml.load(file) as KeyConfig;
 };

@@ -26,6 +26,7 @@ WORKDIR /app
 COPY --from=build /app/server server
 
 ENV NODE_ENV=production
+ENV CONFIG_PATH=/app/config.yml
 
 CMD ["./server"]
 

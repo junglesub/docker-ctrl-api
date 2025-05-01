@@ -76,10 +76,10 @@ export async function updateContainerWithRollback(options: UpdateOptions) {
 
     if (status === "healthy") {
       console.log("✅ New container is healthy.");
-      // 6. Delete old image
-      console.log("Removing old image:", oldImageId);
 
+      // 6. Delete old image
       if ((await newContainer.inspect()).Image !== oldImageId) {
+        console.log("Removing old image:", oldImageId);
         await docker.getImage(oldImageId).remove();
         console.log("✅ Old image removed.");
       }

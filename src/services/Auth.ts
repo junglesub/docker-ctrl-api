@@ -1,14 +1,13 @@
 import { Elysia } from "elysia";
-import { KeyConfigService } from "./KeyConfig";
+import { getKeyConfig } from "./KeyConfig";
 import { validateKey } from "../tools/validateKeys";
 
 // Read Headers and query to get data
 export const AuthService = new Elysia({ name: "Service.Auth" })
-  .use(KeyConfigService)
   .resolve(
     { as: "scoped" },
-    ({ query: { id }, headers: { "x-api-key": apiKey }, KeyYaml }) => ({
-      Auth: validateKey(KeyYaml, id, apiKey || ""),
+    ({ query: { id }, headers: { "x-api-key": apiKey } }) => ({
+      Auth: validateKey(getKeyConfig(), id, apiKey || ""),
     })
   )
   .macro(({ onBeforeHandle }) => ({

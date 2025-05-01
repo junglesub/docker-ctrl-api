@@ -1,0 +1,21 @@
+meta {
+  name: test
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{ROOT_URL}}/update?id=myApp
+  body: none
+  auth: apikey
+}
+
+params:query {
+  id: myApp
+}
+
+auth:apikey {
+  key: X-API-Key
+  value: bb
+  placement: header
+}

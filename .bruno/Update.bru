@@ -1,0 +1,31 @@
+meta {
+  name: Update
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{ROOT_URL}}/update?id=myApp
+  body: json
+  auth: apikey
+}
+
+params:query {
+  id: myApp
+}
+
+auth:apikey {
+  key: X-API-Key
+  value: abc123
+  placement: header
+}
+
+body:json {
+  {
+    "gh": {
+      "commitSha": "c82b3f2aa8fa2a604e88095ae73351ca67be1241",
+      "githubRepo": "handong-app/handong-feed-app",
+      "githubToken": "{{GITHUB_SECRET}}"
+    }
+  }
+}

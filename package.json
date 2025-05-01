@@ -7,9 +7,13 @@
     "dev": "bun run --watch src/index.ts"
   },
   "dependencies": {
-    "elysia": "latest"
+    "dockerode": "^4.0.6",
+    "elysia": "latest",
+    "js-yaml": "^4.1.0"
   },
   "devDependencies": {
+    "@types/dockerode": "^3.3.38",
+    "@types/js-yaml": "^4.0.9",
     "bun-types": "latest"
   },
   "module": "src/index.js"

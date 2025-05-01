@@ -7,9 +7,12 @@ export const AuthService = new Elysia({ name: "Service.Auth" })
   .use(KeyConfigService)
   .resolve(
     { as: "scoped" },
-    ({ query: { id }, headers: { "x-api-key": apiKey }, KeyYaml }) => ({
-      Auth: validateKey(KeyYaml, id, apiKey || ""),
-    })
+    ({ query: { id }, headers: { "x-api-key": apiKey }, KeyYaml }) => {
+      if (!KeyYaml) throw new Error("KeyYaml is undefined");
+      return {
+        Auth: validateKey(KeyYaml, id, apiKey || ""),
+      };
+    }
   )
   .macro(({ onBeforeHandle }) => ({
     isCorrectCred(value: boolean) {

@@ -6,7 +6,7 @@ import { KeyConfig } from "../interface";
 // Read Key Config and save to variable
 export const KeyConfigService = new Elysia({
   name: "Service.KeyConfig",
-}).derive({ as: "global" }, () => ({
+}).derive({ as: "scoped" }, () => ({
   KeyYaml: loadKeyConfig(),
 }));
 

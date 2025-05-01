@@ -91,7 +91,7 @@ The server runs on `http://localhost:3000` by default.
 ### Run Container
 
 ```bash
-docker run -p 3000:3000 -v ./config.yml:/app/config.yml ghcr.io/junglesub/docker-ctrl-api:latest
+docker run -p 3000:3000 -v ./config.yml:/app/config.yml -v /var/run/docker.sock:/var/run/docker.sock ghcr.io/junglesub/docker-ctrl-api:latest
 ```
 
 > Ensure the container has access to the Docker socket:

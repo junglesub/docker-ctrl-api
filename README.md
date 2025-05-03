@@ -12,7 +12,7 @@ Docker Control API is a lightweight API server for managing and updating Docker 
 - 🔄 Update and rollback containers with image version tracking
 - 🔃 Update GitHub commit status to reflect deployment result
 - 🔐 API key authentication for secure requests
-- (Planned) Auto rollback when deploy fails
+- (Planned) Implement Rolling deployment
 - (Planned) Better API-Key Encryption
 
 ## ⚙️ Requirements

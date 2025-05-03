@@ -1,6 +1,6 @@
 import Docker from "dockerode";
 import { GithubInfo } from "../interface";
-import { updateGitHubCommitStatus } from "./githubStatue";
+import { updateGitHubCommitStatuses } from "./githubStatuses";
 const docker = new Docker({ socketPath: "/var/run/docker.sock" });
 
 interface UpdateOptions {
@@ -23,7 +23,7 @@ export async function updateContainerWithRollback(options: UpdateOptions) {
   try {
     // Notify GitHub status
     if (githubInfo)
-      updateGitHubCommitStatus({
+      updateGitHubCommitStatuses({
         state: "pending",
         description: "Updating container...",
         githubInfo,
@@ -43,7 +43,8 @@ export async function updateContainerWithRollback(options: UpdateOptions) {
     const oldContainerInfo = await container.inspect();
 
     // 2. Pull new image
-    const baseImageName = oldImageRef.split("@")[0].split(":")[0];
+    const baseImageName =
+      oldContainerInfo.Config.Image.split("@")[0].split(":")[0];
     const pullRef = `${baseImageName}:${imagePullTag}`;
     console.log(`Pulling image: ${pullRef}`);
     await docker.pull(pullRef);
@@ -85,7 +86,7 @@ export async function updateContainerWithRollback(options: UpdateOptions) {
       }
 
       if (githubInfo)
-        updateGitHubCommitStatus({
+        updateGitHubCommitStatuses({
           state: "success",
           description: "Deployment succeeded.",
           githubInfo,
@@ -105,7 +106,7 @@ export async function updateContainerWithRollback(options: UpdateOptions) {
       await rollback.start();
       console.log("✅ Rollback complete.");
       if (githubInfo)
-        updateGitHubCommitStatus({
+        updateGitHubCommitStatuses({
           state: "failure",
           description: "Deployment failed. Rolled back to previous version.",
           githubInfo,
@@ -114,7 +115,7 @@ export async function updateContainerWithRollback(options: UpdateOptions) {
   } catch (err: any) {
     console.error("Update failed:", err);
     if (githubInfo)
-      updateGitHubCommitStatus({
+      updateGitHubCommitStatuses({
         state: "error",
         description: "Update failed. " + err.toString().slice(0, 100),
         githubInfo,

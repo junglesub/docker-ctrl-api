@@ -2,7 +2,7 @@
 
 import { GithubInfo } from "../interface";
 
-export async function updateGitHubCommitStatus(params: {
+export async function updateGitHubCommitStatuses(params: {
   state: "pending" | "success" | "failure" | "error";
   description: string;
   githubInfo: GithubInfo;
@@ -10,7 +10,7 @@ export async function updateGitHubCommitStatus(params: {
   const {
     state,
     description,
-    githubInfo: { githubRepo, commitSha, githubToken },
+    githubInfo: { githubRepo, commitSha },
   } = params;
   const [owner, repo] = githubRepo.split("/");
   const url = `https://api.github.com/repos/${owner}/${repo}/statuses/${commitSha}`;
@@ -18,7 +18,7 @@ export async function updateGitHubCommitStatus(params: {
   const res = await fetch(url, {
     method: "POST",
     headers: {
-      Authorization: `token ${githubToken}`,
+      Authorization: `token ${process.env.GITHUB_TOKEN}`,
       Accept: "application/vnd.github+json",
       "Content-Type": "application/json",
     },

@@ -17,7 +17,6 @@ const app = new Elysia()
         githubInfo: {
           commitSha: body.gh.commitSha,
           githubRepo: body.gh.githubRepo,
-          githubToken: body.gh.githubToken,
         },
       });
       return "ok";
@@ -27,7 +26,6 @@ const app = new Elysia()
         gh: t.Object({
           commitSha: t.String(),
           githubRepo: t.String(),
-          githubToken: t.String(),
         }),
       }),
       query: t.Object({

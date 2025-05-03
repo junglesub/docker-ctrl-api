@@ -14,6 +14,7 @@ Docker Control API is a lightweight API server for managing and updating Docker 
 - 🔐 API key authentication for secure requests
 - (Planned) Implement Rolling deployment
 - (Planned) Better API-Key Encryption
+- (Planned) Use Github APP to set Github statuses
 
 ## ⚙️ Requirements
 
@@ -31,6 +32,12 @@ cd docker-ctrl-api
 # Install dependencies
 bun install
 ```
+
+## 🌐 Environment Variables
+
+The following environment variable is required for optional GitHub integration:
+
+- `GITHUB_SECRET` — used to authenticate and update commit statuses on GitHub
 
 ### Configuration
 
@@ -75,8 +82,7 @@ The server runs on `http://localhost:3000` by default.
 {
   "gh": {
     "commitSha": "your-commit-sha",
-    "githubRepo": "owner/repo",
-    "githubToken": "your-github-token"
+    "githubRepo": "owner/repo"
   }
 }
 ```

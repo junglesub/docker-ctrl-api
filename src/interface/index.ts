@@ -12,5 +12,4 @@ export interface KeyConfig {
 export interface GithubInfo {
   commitSha: string;
   githubRepo: string;
-  githubToken: string;
 }

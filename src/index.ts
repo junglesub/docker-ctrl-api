@@ -14,6 +14,7 @@ const app = new Elysia()
     ({ Auth, body }) => {
       updateContainerWithRollback({
         containerName: Auth!.container_name,
+        imagePullTag: body.gh.tagName,
         githubInfo: {
           commitSha: body.gh.commitSha,
           githubRepo: body.gh.githubRepo,
@@ -26,6 +27,7 @@ const app = new Elysia()
         gh: t.Object({
           commitSha: t.String(),
           githubRepo: t.String(),
+          tagName: t.Optional(t.String()),
         }),
       }),
       query: t.Object({

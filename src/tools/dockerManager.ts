@@ -47,7 +47,135 @@ export async function updateContainerWithRollback(options: UpdateOptions) {
       oldContainerInfo.Config.Image.split("@")[0].split(":")[0];
     const pullRef = `${baseImageName}:${imagePullTag}`;
     console.log(`Pulling image: ${pullRef}`);
-    await docker.pull(pullRef);
+
+    let pullAttempts = 0;
+    const maxPullAttempts = 10;
+    let currentDelay = 10_000; // Initial delay 10 second
+
+    while (pullAttempts < maxPullAttempts) {
+      try {
+        console.log(
+          `Attempt ${
+            pullAttempts + 1
+          }/${maxPullAttempts} to pull image ${pullRef}.`
+        );
+        await new Promise<void>((resolve, reject) => {
+          docker.pull(pullRef, {}, (err: any, stream: any) => {
+            if (err) {
+              // 초기 pull 요청 자체의 오류 (예: docker 데몬 연결 불가)
+              return reject(err);
+            }
+            docker.modem.followProgress(
+              stream,
+              (progressErr: any, output: any) => {
+                if (progressErr) {
+                  // 스트림 진행 중 오류
+                  return reject(progressErr);
+                }
+                // output 배열의 마지막 요소가 실제 pull 결과를 담고 있을 가능성이 높음
+                const lastMessage =
+                  output && output.length > 0
+                    ? output[output.length - 1]
+                    : null;
+                if (
+                  lastMessage &&
+                  lastMessage.errorDetail &&
+                  lastMessage.error
+                ) {
+                  // Docker Hub 등에서 manifest not found 와 같은 오류를 errorDetail.message 또는 error 필드로 전달
+                  return reject(
+                    new Error(
+                      lastMessage.errorDetail.message || lastMessage.error
+                    )
+                  );
+                }
+                if (
+                  lastMessage &&
+                  lastMessage.status &&
+                  lastMessage.status
+                    .toLowerCase()
+                    .includes("image is up to date")
+                ) {
+                  // 이미지가 최신인 경우, 성공으로 간주하고 ID 검사를 진행
+                  resolve();
+                  return;
+                }
+                if (output && output.some((o: any) => o.error)) {
+                  // 스트림 중간에 에러가 있었는지 확인
+                  const errorEntry = output.find((o: any) => o.error);
+                  return reject(
+                    new Error(
+                      errorEntry.errorDetail?.message || errorEntry.error
+                    )
+                  );
+                }
+                // 성공적으로 pull 완료 (스트림 종료)
+                resolve();
+              }
+            );
+          });
+        });
+
+        const newPulledImageInspect = await docker.getImage(pullRef).inspect();
+        // 'latest' 태그이고, pull된 이미지 ID가 이전 이미지 ID와 동일한 경우 CDN 전파 지연 가능성
+        if (
+          imagePullTag === "latest" &&
+          newPulledImageInspect.Id === oldImageId
+        ) {
+          if (pullAttempts < maxPullAttempts - 1) {
+            // 마지막 시도가 아닐 경우에만 에러 발생
+            throw new Error(
+              `Image ${pullRef} is up to date, but its ID (${newPulledImageInspect.Id}) matches the old image ID. Potential CDN propagation delay.`
+            );
+          } else {
+            // 마지막 시도에서는 경고만 하고 진행 (후속 헬스체크에 의존)
+            console.warn(
+              `Image ${pullRef} is up to date and its ID matches the old image ID on the last attempt (${
+                pullAttempts + 1
+              }/${maxPullAttempts}). Proceeding with caution, relying on subsequent health checks.`
+            );
+          }
+        }
+
+        console.log(`Image ${pullRef} pulled successfully.`);
+        break; // Pull successful, exit loop
+      } catch (err: any) {
+        pullAttempts++;
+        const errorMessage = err.message || err.toString();
+        console.warn(
+          `Attempt ${pullAttempts}/${maxPullAttempts}: Failed to pull image ${pullRef}. Error: ${errorMessage}`
+        );
+
+        const normalizedErrorMessage = errorMessage.toLowerCase();
+        // 재시도 조건: (특정 태그 && (404 유사 오류)) || (latest 태그 && ID 동일로 인한 CDN 지연 의심) || 일반 네트워크/풀 오류
+        const isRetryableError =
+          (imagePullTag !== "latest" &&
+            (normalizedErrorMessage.includes("not found") ||
+              normalizedErrorMessage.includes("manifest unknown") ||
+              (normalizedErrorMessage.includes("manifest for") &&
+                normalizedErrorMessage.includes("not found")))) ||
+          (imagePullTag === "latest" &&
+            normalizedErrorMessage.includes(
+              "potential cdn propagation delay"
+            )) ||
+          normalizedErrorMessage.includes("timeout") || // 일반적인 타임아웃
+          normalizedErrorMessage.includes("error pulling image") || // dockerode의 일반적인 pull 에러 메시지
+          normalizedErrorMessage.includes("tls handshake timeout") || // 네트워크 관련
+          normalizedErrorMessage.includes("pull access denied"); // 접근 권한 문제 (일시적일 수 있음)
+
+        if (isRetryableError && pullAttempts < maxPullAttempts) {
+          console.log(`Retrying in ${currentDelay / 1000} seconds...`);
+          await wait(currentDelay);
+          currentDelay = Math.floor(currentDelay * 1.5); // Exponential backoff with int floor
+        } else {
+          // 최종 실패
+          const finalErrorMessage = `Failed to pull image ${pullRef} after ${maxPullAttempts} attempts. Last error: ${errorMessage}`;
+          console.error(finalErrorMessage);
+          // 에러를 다시 던져서 updateContainerWithRollback의 catch 블록에서 처리하도록 함
+          throw new Error(finalErrorMessage);
+        }
+      }
+    }
 
     // 3. Stop & remove old container
     console.log("Stopping current container...");

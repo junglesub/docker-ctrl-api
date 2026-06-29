@@ -49,9 +49,19 @@ keys:
   myApp:
     container_name: test_feed
     secret_key: abc123
+    overwrite_env:
+      - APP_VERSION
 ```
 
 This path defaults to `./config.yml` but can be overridden by setting the `CONFIG_PATH` environment variable.
+
+#### Service options
+
+- `container_name`: Existing Docker container name to update.
+- `secret_key`: API key required in the `x-api-key` request header.
+- `overwrite_env`: Optional list of environment variable names that should use the new image's default `ENV` values instead of values copied from the old container. Existing environment variables are otherwise preserved.
+
+For example, if the old container has `APP_VERSION=v1.2.2`, the new image defines `APP_VERSION=v1.2.3`, and `overwrite_env` contains `APP_VERSION`, the replacement container will use `APP_VERSION=v1.2.3`. This works by not copying the old container's value for that name when creating the replacement container.
 
 ## 🚀 Development Server
 

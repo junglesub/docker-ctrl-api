@@ -6,6 +6,7 @@ const docker = new Docker({ socketPath: "/var/run/docker.sock" });
 interface UpdateOptions {
   containerName: string;
   imagePullTag?: string;
+  overwriteEnv?: string[];
   maxWaitMs?: number; // default 180000 (3 minute)
   pollIntervalMs?: number; // default 5000
   githubInfo?: GithubInfo;
@@ -15,6 +16,7 @@ export async function updateContainerWithRollback(options: UpdateOptions) {
   const {
     containerName,
     imagePullTag = "latest",
+    overwriteEnv = [],
     maxWaitMs = 180_000, // wait upto 3 minutes
     pollIntervalMs = 5000,
     githubInfo,
@@ -186,6 +188,10 @@ export async function updateContainerWithRollback(options: UpdateOptions) {
     console.log("Starting new container...");
     const newContainer = await docker.createContainer({
       ...oldContainerInfo.Config, // 상세 설정 정보
+      Env: removeImageDefaultEnvOverrides(
+        oldContainerInfo.Config.Env,
+        overwriteEnv
+      ),
       HostConfig: oldContainerInfo.HostConfig, // 호스트 관련 설정 (포트, 볼륨 등)
       NetworkingConfig: {
         EndpointsConfig: oldContainerInfo.NetworkSettings.Networks,
@@ -273,4 +279,19 @@ async function waitForHealthStatus(
 
 function wait(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function removeImageDefaultEnvOverrides(
+  currentEnv: string[] | undefined,
+  overwriteEnv: string[]
+) {
+  if (overwriteEnv.length === 0) return currentEnv;
+
+  const targetNames = new Set(overwriteEnv);
+  return (currentEnv ?? []).filter((entry) => {
+    const separatorIndex = entry.indexOf("=");
+    const name = separatorIndex === -1 ? entry : entry.slice(0, separatorIndex);
+
+    return !targetNames.has(name);
+  });
 }

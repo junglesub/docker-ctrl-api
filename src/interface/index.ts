@@ -1,6 +1,7 @@
 export interface KeyConfigItem {
   container_name: string;
   secret_key: string;
+  overwrite_env?: string[];
 }
 
 export interface KeyConfig {

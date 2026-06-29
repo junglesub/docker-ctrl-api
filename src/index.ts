@@ -15,6 +15,7 @@ const app = new Elysia()
       updateContainerWithRollback({
         containerName: Auth!.container_name,
         imagePullTag: body.gh.tagName,
+        overwriteEnv: Auth!.overwrite_env,
         githubInfo: {
           commitSha: body.gh.commitSha,
           githubRepo: body.gh.githubRepo,

@@ -36,9 +36,9 @@ bun install
 
 ## 🌐 Environment Variables
 
-The following environment variable is required for optional GitHub integration:
+The following environment variable is optional and only needed for GitHub integration:
 
-- `GITHUB_SECRET` — used to authenticate and update commit statuses on GitHub
+- `GITHUB_TOKEN` — used to authenticate and update commit statuses on GitHub. If this is not set, deployments still run and GitHub status updates are skipped.
 
 ### Configuration
 

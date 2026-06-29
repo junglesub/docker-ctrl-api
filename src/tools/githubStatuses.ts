@@ -7,6 +7,12 @@ export async function updateGitHubCommitStatuses(params: {
   description: string;
   githubInfo: GithubInfo;
 }) {
+  const githubToken = process.env.GITHUB_TOKEN;
+  if (!githubToken) {
+    console.warn("GITHUB_TOKEN is not set. Skipping GitHub status update.");
+    return;
+  }
+
   const {
     state,
     description,
@@ -18,7 +24,7 @@ export async function updateGitHubCommitStatuses(params: {
   const res = await fetch(url, {
     method: "POST",
     headers: {
-      Authorization: `token ${process.env.GITHUB_TOKEN}`,
+      Authorization: `token ${githubToken}`,
       Accept: "application/vnd.github+json",
       "Content-Type": "application/json",
     },

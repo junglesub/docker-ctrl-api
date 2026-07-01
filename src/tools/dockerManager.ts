@@ -184,32 +184,34 @@ export async function updateContainerWithRollback(options: UpdateOptions) {
     await container.stop();
     await container.remove();
 
-    // 4. Start new container with new image
-    console.log("Starting new container...");
-    const newContainer = await docker.createContainer({
-      ...oldContainerInfo.Config, // 상세 설정 정보
-      Env: removeImageDefaultEnvOverrides(
-        oldContainerInfo.Config.Env,
-        overwriteEnv
-      ),
-      HostConfig: oldContainerInfo.HostConfig, // 호스트 관련 설정 (포트, 볼륨 등)
-      NetworkingConfig: {
-        EndpointsConfig: oldContainerInfo.NetworkSettings.Networks,
-      }, // 네트워크 설정
-      Image: pullRef,
-      name: containerName,
-    });
-    await newContainer.start();
+    let newContainer: Docker.Container | undefined;
 
-    // 5. Wait for HEALTHY
-    console.log("Waiting for container to become healthy...");
-    const status = await waitForHealthStatus(
-      newContainer,
-      maxWaitMs,
-      pollIntervalMs
-    );
+    try {
+      // 4. Start new container with new image
+      console.log("Starting new container...");
+      newContainer = await createContainerFromInspect({
+        containerInfo: oldContainerInfo,
+        image: pullRef,
+        name: containerName,
+        env: removeImageDefaultEnvOverrides(
+          oldContainerInfo.Config.Env,
+          overwriteEnv
+        ),
+      });
+      await newContainer.start();
 
-    if (status === "healthy") {
+      // 5. Wait for HEALTHY
+      console.log("Waiting for container to become healthy...");
+      const status = await waitForHealthStatus(
+        newContainer,
+        maxWaitMs,
+        pollIntervalMs
+      );
+
+      if (status !== "healthy") {
+        throw new Error(`Health check failed (status: ${status}).`);
+      }
+
       console.log("✅ New container is healthy.");
 
       // 6. Delete old image
@@ -225,20 +227,26 @@ export async function updateContainerWithRollback(options: UpdateOptions) {
           description: "Deployment succeeded.",
           githubInfo,
         });
-    } else {
-      console.warn(
-        `❌ Health check failed (status: ${status}). Rolling back...`
-      );
-      await newContainer.stop();
-      await newContainer.remove();
+    } catch (deployErr) {
+      console.warn("❌ Deployment failed. Rolling back...", deployErr);
 
-      const rollback = await docker.createContainer({
-        ...existing,
-        Image: oldImageId,
+      if (newContainer) {
+        await removeContainerIfExists(newContainer).catch((cleanupErr) => {
+          console.error(
+            "Failed to remove failed deployment container:",
+            cleanupErr
+          );
+        });
+      }
+
+      const rollback = await createContainerFromInspect({
+        containerInfo: oldContainerInfo,
+        image: oldImageId,
         name: containerName,
       });
       await rollback.start();
       console.log("✅ Rollback complete.");
+
       if (githubInfo)
         updateGitHubCommitStatuses({
           state: "failure",
@@ -279,6 +287,42 @@ async function waitForHealthStatus(
 
 function wait(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function createContainerFromInspect(options: {
+  containerInfo: Awaited<ReturnType<Docker.Container["inspect"]>>;
+  image: string;
+  name: string;
+  env?: string[];
+}) {
+  const { containerInfo, image, name, env } = options;
+
+  return docker.createContainer({
+    ...containerInfo.Config,
+    Env: env ?? containerInfo.Config.Env,
+    HostConfig: containerInfo.HostConfig,
+    NetworkingConfig: {
+      EndpointsConfig: containerInfo.NetworkSettings.Networks,
+    },
+    Image: image,
+    name,
+  });
+}
+
+async function removeContainerIfExists(container: Docker.Container) {
+  try {
+    const inspect = await container.inspect();
+
+    if (inspect.State.Running) {
+      await container.stop();
+    }
+
+    await container.remove();
+  } catch (err: any) {
+    if (err.statusCode === 404) return;
+
+    throw err;
+  }
 }
 
 function removeImageDefaultEnvOverrides(

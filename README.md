@@ -103,6 +103,10 @@ The server runs on `http://localhost:3000` by default.
 - Success: `"ok"`
 - Failure: HTTP error status with message
 
+#### Deployment behavior
+
+The update flow inspects the existing container before replacing it. Both the new deployment container and any rollback container are created from that inspect data, preserving the original container config, host config, port bindings, volume bindings, and Docker network attachments while swapping only the image reference. If the replacement container cannot be created, cannot start, or does not become healthy before the timeout, the failed replacement is removed and the previous image is started again with the preserved settings.
+
 ## 🐳 Docker Support
 
 ### Run Container
